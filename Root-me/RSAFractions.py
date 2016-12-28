@@ -1,0 +1,68 @@
+from Crypto.Util.number import *
+from sympy.solvers import solve
+from sympy import Symbol
+import libnum
+
+'''
+python rsatool.py -f PEM -o private.pem -p 240235037993086647490360091251920509660926008787784163933134217892938306866733942789677346753386227305733054945882967240289722901543973488715609201686292184661845932338700104193843036687863902362262743558762135191383008370605906319072352806840967443808455667223189470493469726348267326087313303773058894562037 -q 273067835270880086905225991495379768025497181071655465691068234751894433419924689398578343149876505032891110212422075482294849988417876098468455656340271714411918145829343178315564694346337087829483997746033122936265729805143582391157953230943745740375876718066059315171626227510845447370568918599985468283447 -e 0xf70b3bd74801a25eccbde24e01b077677e298391d4197b099a6f961244f04314da7de144dd69a8aa84686bf4ddbd14a6344bbc315218dbbaf29490a44e42e5c4a2a4e76b8101a5ca82351c07b4cfd4e08038c8d5573a827b227bce515b70866724718ec2ac03359614cdf43dd88f1ac7ee453917975a13c019e620e531207692224009c75eaef11e130f8e54cce31e86c84e9366219ae5c250853be145ea87dcf37aa7ece0a994195885e31ebcd8fe742df1cd1370c95b6684ab6c37e84762193c27dd34c3cf3f5e69957b8338f9143a0052c9381d9e2ecb9ef504c954b453f57632705ed44b28a4b5cbe61368e485da6af2dfc901e45868cdd5006913f338a3
+and use puttygen to convert private.pem to private.ppk
+'''
+
+def partial_quotiens(x, y):
+    pq = []
+    while x != 1:
+        pq.append(x / y)
+        a = y
+        b = x % y
+        x = a
+        y = b
+    return pq
+
+def rational(pq):
+    i = len(pq) - 1
+    num = pq[i]
+    denom = 1
+    while i > 0:
+        i -= 1
+        a = (pq[i] * num) + denom
+        b = num
+        num = a
+        denom = b
+    return (num, denom)
+
+def convergents(pq):
+    c = []
+    for i in range(1, len(pq)):
+        c.append(rational(pq[0:i]))
+    return c
+
+def phiN(e, d, k):
+    return ((e * d) - 1) / k
+
+def wiener_attack(e, n):
+    pq = partial_quotiens(e, n)
+    c = convergents(pq)
+    x = Symbol('x')
+    for (k, d) in c:
+        if k != 0:
+            y = n - phiN(e, d, k) + 1
+            roots = solve(x**2 - y*x + n, x)
+            if len(roots) == 2:
+                p = roots[0]
+                q = roots[1]
+                if p * q == n:
+                    break
+    return p, q
+
+def decrypt(p, q, e, n, ct):
+    phi = (p - 1 ) * (q - 1)
+    d = libnum.invmod(e, phi)
+    pt = pow(ct, long(d), n)
+    return libnum.n2s(pt)
+
+################### Wieners attack!(small d, big e)"
+e = 0xf70b3bd74801a25eccbde24e01b077677e298391d4197b099a6f961244f04314da7de144dd69a8aa84686bf4ddbd14a6344bbc315218dbbaf29490a44e42e5c4a2a4e76b8101a5ca82351c07b4cfd4e08038c8d5573a827b227bce515b70866724718ec2ac03359614cdf43dd88f1ac7ee453917975a13c019e620e531207692224009c75eaef11e130f8e54cce31e86c84e9366219ae5c250853be145ea87dcf37aa7ece0a994195885e31ebcd8fe742df1cd1370c95b6684ab6c37e84762193c27dd34c3cf3f5e69957b8338f9143a0052c9381d9e2ecb9ef504c954b453f57632705ed44b28a4b5cbe61368e485da6af2dfc901e45868cdd5006913f338a3
+n = 0x0207a7df9d173f5969ad16dc318496b36be39fe581207e6ea318d3bfbe22c8b485600ba9811a78decc6d5aab79a1c2c491eb6d4f39820657b6686391b85474172ae504f48f02f7ee3a2ab31fce1cf9c22f40e919965c7f67a8acbfa11ee4e7e2f3217bc9a054587500424d0806c0e759081651f6e406a9a642de6e8e131cb644a12e46573bd8246dc5e067d2a4f176fef6eec445bfa9db888a35257376e67109faabe39b0cf8afe2ca123da8314d09f2404922fc4116d682a4bdaeecb73f59c49db7fa12a7fc5c981454925c94e0b5472e02d924dad62c260066e07c7d3b1089d5475c2c066b7f94553c75e856e3a2a773c6c24d5ba64055eb8fea3e57b06b04a3
+p, q = wiener_attack(e, n)
+print 'p', p
+print 'q', q

@@ -1,0 +1,2 @@
+./ch5 "`python -c \"print '%x '*10 +'\nkey---> '+'%x '*4\"`"
+python -c "print ''.join(reversed(\"646d6170452829366439617044\".decode('hex')))"

@@ -1,0 +1,1 @@
+./ch21 `python -c "import crypt, os; print crypt.crypt(str(os.getpid()+1), '\\$1\\$awesome')"`
